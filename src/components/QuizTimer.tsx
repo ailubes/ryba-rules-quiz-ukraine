@@ -11,44 +11,58 @@ type QuizTimerProps = {
 };
 
 const QuizTimer = ({ timeLimit, onTimeUp }: QuizTimerProps) => {
-  const { state, updateTimeRemaining } = useQuiz();
+  const { updateTimeRemaining } = useQuiz();
   const [timeLeft, setTimeLeft] = useState(timeLimit);
   const [isWarning, setIsWarning] = useState(false);
   const timerRef = useRef<number | null>(null);
-
+  const onTimeUpRef = useRef(onTimeUp);
+  
+  // Update the ref when onTimeUp changes
   useEffect(() => {
-    // Clear any existing timer on component mount/unmount
-    if (timerRef.current) {
-      window.clearInterval(timerRef.current);
-    }
+    onTimeUpRef.current = onTimeUp;
+  }, [onTimeUp]);
 
-    timerRef.current = window.setInterval(() => {
-      setTimeLeft((prevTime) => {
-        if (prevTime <= 1) {
-          if (timerRef.current) {
-            window.clearInterval(timerRef.current);
+  // Set up the timer once on mount
+  useEffect(() => {
+    const setupTimer = () => {
+      // Clear any existing timer
+      if (timerRef.current !== null) {
+        window.clearInterval(timerRef.current);
+      }
+
+      timerRef.current = window.setInterval(() => {
+        setTimeLeft((prevTime) => {
+          if (prevTime <= 1) {
+            if (timerRef.current !== null) {
+              window.clearInterval(timerRef.current);
+              timerRef.current = null;
+            }
+            onTimeUpRef.current();
+            return 0;
           }
-          onTimeUp();
-          return 0;
-        }
-        return prevTime - 1;
-      });
-    }, 1000);
+          return prevTime - 1;
+        });
+      }, 1000);
+    };
+
+    setupTimer();
 
     // Clean up interval on component unmount
     return () => {
-      if (timerRef.current) {
+      if (timerRef.current !== null) {
         window.clearInterval(timerRef.current);
+        timerRef.current = null;
       }
     };
-  }, [onTimeUp]);
+  }, [timeLimit]); // Only re-run if timeLimit changes
 
+  // Update context whenever timeLeft changes
   useEffect(() => {
     updateTimeRemaining(timeLeft);
   }, [timeLeft, updateTimeRemaining]);
 
+  // Set warning when less than 20% of time remains
   useEffect(() => {
-    // Set warning when less than 20% of time remains
     setIsWarning(timeLeft < timeLimit * 0.2);
   }, [timeLeft, timeLimit]);
 

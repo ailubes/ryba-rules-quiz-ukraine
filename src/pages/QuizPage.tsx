@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { QuizProvider } from '../contexts/QuizContext';
 import UserRegistrationForm from '../components/UserRegistrationForm';
 import QuizContainer from '../components/QuizContainer';
@@ -18,34 +18,36 @@ enum QuizStep {
 const QuizPage = () => {
   const [currentStep, setCurrentStep] = useState<QuizStep>(QuizStep.REGISTRATION);
 
-  const handleStartQuiz = () => {
+  // Use useCallback to memoize the handlers
+  const handleStartQuiz = useCallback(() => {
     setCurrentStep(QuizStep.QUIZ);
-  };
+  }, []);
 
-  const handleQuizComplete = () => {
+  const handleQuizComplete = useCallback(() => {
     setCurrentStep(QuizStep.RESULTS);
-  };
+  }, []);
 
-  const handleViewStats = () => {
+  const handleViewStats = useCallback(() => {
     setCurrentStep(QuizStep.STATISTICS);
-  };
+  }, []);
 
-  const handleRestart = () => {
+  const handleRestart = useCallback(() => {
     setCurrentStep(QuizStep.REGISTRATION);
-  };
+  }, []);
 
+  // Decide which component to render based on current step
   const renderStep = () => {
     switch (currentStep) {
       case QuizStep.REGISTRATION:
-        return <UserRegistrationForm onSubmit={handleStartQuiz} />;
+        return <UserRegistrationForm onSubmit={handleStartQuiz} key="registration" />;
       case QuizStep.QUIZ:
-        return <QuizContainer onComplete={handleQuizComplete} />;
+        return <QuizContainer onComplete={handleQuizComplete} key="quiz" />;
       case QuizStep.RESULTS:
-        return <QuizResults onRestart={handleRestart} onViewStats={handleViewStats} />;
+        return <QuizResults onRestart={handleRestart} onViewStats={handleViewStats} key="results" />;
       case QuizStep.STATISTICS:
-        return <QuizStatistics onBack={handleRestart} />;
+        return <QuizStatistics onBack={handleRestart} key="statistics" />;
       default:
-        return <UserRegistrationForm onSubmit={handleStartQuiz} />;
+        return <UserRegistrationForm onSubmit={handleStartQuiz} key="default" />;
     }
   };
 

@@ -1,5 +1,5 @@
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useQuiz } from '../contexts/QuizContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -14,7 +14,7 @@ const QuizTimer = ({ timeLimit, onTimeUp }: QuizTimerProps) => {
   const { updateTimeRemaining } = useQuiz();
   const [timeLeft, setTimeLeft] = useState(timeLimit);
   const [isWarning, setIsWarning] = useState(false);
-  const timerRef = useRef<number | null>(null);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
   const onTimeUpRef = useRef(onTimeUp);
   
   // Update the ref when onTimeUp changes
@@ -22,39 +22,37 @@ const QuizTimer = ({ timeLimit, onTimeUp }: QuizTimerProps) => {
     onTimeUpRef.current = onTimeUp;
   }, [onTimeUp]);
 
+  // Memoize the clear timer function to prevent recreation on each render
+  const clearTimer = useCallback(() => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+  }, []);
+
   // Set up the timer once on mount
   useEffect(() => {
-    const setupTimer = () => {
-      // Clear any existing timer
-      if (timerRef.current !== null) {
-        window.clearInterval(timerRef.current);
-      }
+    // Clear any existing timer first
+    clearTimer();
+    
+    // Set initial time
+    setTimeLeft(timeLimit);
 
-      timerRef.current = window.setInterval(() => {
-        setTimeLeft((prevTime) => {
-          if (prevTime <= 1) {
-            if (timerRef.current !== null) {
-              window.clearInterval(timerRef.current);
-              timerRef.current = null;
-            }
-            onTimeUpRef.current();
-            return 0;
-          }
-          return prevTime - 1;
-        });
-      }, 1000);
-    };
+    // Create a new interval timer
+    timerRef.current = setInterval(() => {
+      setTimeLeft((prevTime) => {
+        if (prevTime <= 1) {
+          clearTimer();
+          onTimeUpRef.current();
+          return 0;
+        }
+        return prevTime - 1;
+      });
+    }, 1000);
 
-    setupTimer();
-
-    // Clean up interval on component unmount
-    return () => {
-      if (timerRef.current !== null) {
-        window.clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-    };
-  }, [timeLimit]); // Only re-run if timeLimit changes
+    // Clean up interval on component unmount or when dependencies change
+    return clearTimer;
+  }, [timeLimit, clearTimer]);
 
   // Update context whenever timeLeft changes
   useEffect(() => {

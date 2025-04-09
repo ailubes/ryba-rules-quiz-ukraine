@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useQuiz } from '../contexts/QuizContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -14,12 +14,20 @@ const QuizTimer = ({ timeLimit, onTimeUp }: QuizTimerProps) => {
   const { state, updateTimeRemaining } = useQuiz();
   const [timeLeft, setTimeLeft] = useState(timeLimit);
   const [isWarning, setIsWarning] = useState(false);
+  const timerRef = useRef<number | null>(null);
 
   useEffect(() => {
-    const timer = setInterval(() => {
+    // Clear any existing timer on component mount/unmount
+    if (timerRef.current) {
+      window.clearInterval(timerRef.current);
+    }
+
+    timerRef.current = window.setInterval(() => {
       setTimeLeft((prevTime) => {
         if (prevTime <= 1) {
-          clearInterval(timer);
+          if (timerRef.current) {
+            window.clearInterval(timerRef.current);
+          }
           onTimeUp();
           return 0;
         }
@@ -27,7 +35,12 @@ const QuizTimer = ({ timeLimit, onTimeUp }: QuizTimerProps) => {
       });
     }, 1000);
 
-    return () => clearInterval(timer);
+    // Clean up interval on component unmount
+    return () => {
+      if (timerRef.current) {
+        window.clearInterval(timerRef.current);
+      }
+    };
   }, [onTimeUp]);
 
   useEffect(() => {

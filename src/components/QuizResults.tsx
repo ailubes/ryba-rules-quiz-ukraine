@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useQuiz } from '../contexts/QuizContext';
 import { QuizResult } from '../types/quiz';
